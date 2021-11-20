@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>Chapter 9_draw_bars_add_remove</title>
+  </head>
+  <style>
+    .button-sec {
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
+      width: 340px;
+      margin: 40px;
+    }
+    #add-bar {
+      font-weight: bold;
+      font-size: 22px;
+      color: green;
+      background-color: blue;
+      cursor: pointer;
+      border: 2px solid black;
+      border-radius: 15px;
+      padding: 5px;
+
+    }
+    #remove-bar {
+      font-weight: bold;
+      font-size: 22px;
+      color: red;
+      background-color: blue;
+      cursor: pointer;
+      border: 2px solid black;
+      border-radius: 15px;
+      padding: 5px;
+
+    }
+  </style>
+  <body>
+    <div class="container">
+      <section class="button-sec">
+        <div id="add-bar">Add One Bar</div>
+        <div id="remove-bar">Remove One Bar</div>
+      </section>
+
+      <div id="chart-area"></div>
+    </div>
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      const svg_width = 1100;
+      const svg_height = 600;
+      const max_value = 100;
+
+      //create data set
+      let dataset = [];           //Initialize empty array
+      for(let i = 0; i < 25; i++){   //Loop 25 times
+        const newNumber = Math.floor(Math.random() * max_value);   //New random number (0-29)
+        dataset.push(newNumber);
+      }
+
+      //compute x,y scaling
+      const x_scale = d3.scaleBand()
+        .domain(d3.range(dataset.length))
+        .rangeRound([0, svg_width]) //also enables rounding for 'paddingInner'
+        .paddingInner(0.05);
+      const y_scale = d3.scaleLinear()
+        .domain([0, d3.max(dataset)])
+        .range([0, svg_height]);
+
+      //create SVG element
+      const svg = d3.select('#chart-area')
+        .append('svg')
+        .attr('width',svg_width)
+        .attr('height',svg_height);
+
+      //create bars
+      svg.selectAll('rect').data(dataset).enter()
+        .append('rect')
+        .attr('x', (d, i) => x_scale(i))
+        .attr('y', d => svg_height - y_scale(d))
+        .attr('width', x_scale.bandwidth())
+        .attr('height', d => y_scale(d))
+        .attr('fill', d => `rgb(0,0,${Math.round(d*10)})`);
+
+      //create labels
+      svg.selectAll('text').data(dataset).enter()
+        .append('text')
+        .text(d => d)
+        .attr('x', (d, i) => x_scale(i) + x_scale.bandwidth() / 2)
+        .attr('y', d => {
+          if(d < 3){
+            return svg_height - y_scale(d) - 8;
+          }else {
+            return svg_height - y_scale(d) + 14;
+          }
+        })
+        .attr('fill', (d) => {
+          if(d < 3){
+            return 'black';
+          }else {
+            return 'white';
+          }
+        })
+        .attr('text-anchor','middle')
+        .attr('font-size','10px')
+        .attr('font-family','Verdana')
+        .attr('font-weight','bold');
+
+      //define response to div click -- add one bar
+      d3.select('#add-bar')
+        .on('click',() => {
+          //add one new value to dataset
+          //New random number (0-99)
+          const newNumber = Math.floor(Math.random() * max_value);
+          dataset.push(newNumber);
+
+          //update scale domains
+          x_scale.domain(d3.range(dataset.length));
+          y_scale.domain([0,d3.max(dataset)]);
+
+          //Select all bars
+          const bars = svg.selectAll('rect')
+            //Re-bind data to existing bars, return the 'update' selection
+            .data(dataset);
+          //'bars' is now the update selection
+
+          //enter...
+          //References the enter selection (a subset of the update selection)
+          bars.enter()
+            .append('rect') //Creates a new rect
+            //Sets the initial x position of the rect beyond the far right edge of the SVG
+            .attr('x',svg_width)
+            .attr('y',(d) => {return svg_height - y_scale(d);})
+            .attr('width',x_scale.bandwidth())
+            .attr('height', (d) => {return y_scale(d);})
+            .attr('fill',(d) => {return `rgb(0,0,${Math.round(d*10)})`;})
+            //Merges the enter selection with the update selection
+            .merge(bars)
+            //Initiate a transition on all elements in the update selection (all rects)
+            .transition()
+            .duration(500)
+            //update all bars with new scales
+            //Set new x position, based on the updated xScale
+            .attr('x', (d, i) =>  x_scale(i))
+            //Set new y position, based on the updated yScale
+            .attr('y', d => svg_height - y_scale(d))
+            //Set new width value, based on the updated xScale
+            .attr('width', x_scale.bandwidth())
+            //Set new height value, based on the updated yScale
+            .attr('height', d => y_scale(d));
+
+          //select all text
+          const texts = svg.selectAll('text')
+            //Re-bind data to existing bars, return the 'update' selection
+            .data(dataset);
+          texts.enter()
+            .append('text') //create a new text
+            .text(d => d)
+            .attr('x', (d, i) => x_scale(i) + x_scale.bandwidth() / 2)
+            .attr('y', d => {
+              if(d < 3){
+                return svg_height - y_scale(d) - 8;
+              }else {
+                return svg_height - y_scale(d) + 14;
+              }
+            })
+            .attr('fill', d => {
+              if(d < 3){
+                return 'black';
+              }else {
+                return 'white';
+              }
+            })
+            .attr('text-anchor','middle')
+            .attr('font-size','10px')
+            .attr('font-family','Verdana')
+            .attr('font-weight','bold')
+            //Merges the enter selection with the update selection
+            .merge(texts)
+            //Initiate a transition on all elements in the update selection (all rects)
+            .transition()
+            .duration(500)
+            //update all text with new scales
+            .attr('x', (d, i) => {
+              return x_scale(i) + x_scale.bandwidth() / 2;
+            })
+            .attr('y', (d) => {
+              if(d < 3){
+                return svg_height - y_scale(d) - 8;
+              }else {
+                return svg_height - y_scale(d) + 14;
+              }
+            })
+            .attr('width', x_scale.bandwidth())
+            .attr('height', function(d) {
+              return y_scale(d);
+            });
+        });
+
+      d3.select('#remove-bar')
+        .on('click',() => {
+          //Remove one value from dataset
+          //dataset.shift();
+          dataset.pop();
+          //update scale domains
+          x_scale.domain(d3.range(dataset.length));
+          y_scale.domain([0,d3.max(dataset)]);
+
+          //remove bar
+          //Select all bars
+          const bars = svg.selectAll('rect')
+            //Re-bind data to existing bars, return the 'update' selection
+            .data(dataset);
+          //'bars' is now the update selection
+
+          //Exit…
+          //References the exit selection (a subset of the update selection)
+          bars.exit()
+            //Initiates a transition on the one element we're deleting
+            .transition()
+            .duration(500)
+            //Move past the right edge of the SVG
+            .attr('x', svg_width)
+            //Deletes this element from the DOM once transition is complete
+            .remove();
+
+          //update all bars with new scales
+          svg.selectAll('rect')
+            .data(dataset)
+            .transition()
+            .duration(500)
+            .attr('x', (d, i) => x_scale(i))
+            .attr('y', d => svg_height - y_scale(d))
+            .attr('width', x_scale.bandwidth())
+            .attr('height', d => y_scale(d))
+            .attr('fill', d => `rgb(0,0,${Math.round(d*10)})`);
+
+          //remove text
+          //select all text
+          const texts = svg.selectAll('text')
+            //Re-bind data to existing texts, return the 'update' selection
+            .data(dataset);
+          //Exit…
+          //References the exit selection (a subset of the update selection)
+          texts.exit()
+            //Initiates a transition on the one element we're deleting
+            .transition()
+            .duration(500)
+            //Move past the right edge of the SVG
+            .attr('x', svg_width)
+            //Deletes this element from the DOM once transition is complete
+            .remove();
+
+          //update all texts with new scales
+          svg.selectAll('text')
+            .data(dataset)
+            .text(d => d)
+            .attr('x', (d, i) => x_scale(i) + x_scale.bandwidth() / 2)
+            .attr('y', d => {
+              if(d < 3){
+                return svg_height - y_scale(d) - 8;
+              }else {
+                return svg_height - y_scale(d) + 14;
+              }
+            })
+            .attr('fill', d => {
+              if(d < 3){
+                return 'black';
+              }else {
+                return 'white';
+              }
+            })
+            .attr('text-anchor','middle')
+            .attr('font-size','10px')
+            .attr('font-family','Verdana')
+            .attr('font-weight','bold');
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>Chapter 7_drawing_circles_time_scale</title>
+  </head>
+  <body>
+    <div class="container">
+      <div id="chart-area"></div>
+    </div>
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      let dataset = null;
+      const svg_width = 800;
+      const svg_height = 500;
+      const padding = 20;
+
+      const parse_time = d3.timeParse('%m/%d/%Y');
+      const format_time = d3.timeFormat('%b%e');
+
+      const row_converter = (d) => {
+        return {
+          Date: parse_time(d.Date),
+          Amount: parseInt(d.Amount)
+        };
+      };
+
+      async function draw_data(){
+        const data = await d3.csv('../data/time_scale_data.csv',row_converter);
+
+        const svg = d3.select('#chart-area')
+          .append('svg')
+          .attr('width', svg_width)
+          .attr('height', svg_height);
+
+        const x_scale = d3.scaleTime()
+          .domain([
+            d3.min(data, (d) => {
+              return d.Date;
+            }),
+            d3.max(data, d => d.Date)]).nice()
+          .range([padding, svg_width - padding * 3]);
+
+        const y_scale = d3.scaleLinear()
+          .domain([
+            d3.min(data, d => d.Amount),
+            d3.max(data, d => d.Amount)]).nice()
+          .range([svg_height - padding, padding]);
+
+        svg.selectAll('circle').data(data).enter()
+          .append('circle')
+          .attr('cx', d => x_scale(d.Date))
+          .attr('cy', d => y_scale(d.Amount))
+          .attr('r', 2);
+
+        svg.selectAll('text').data(data).enter()
+          .append('text')
+          .text(d => `${format_time(d.Date)}`)
+          .attr('x', d => x_scale(d.Date) + 5)
+          .attr('y', d => y_scale(d.Amount) + 4)
+          .attr('font-size', '10px')
+          .attr('font-family', 'Verdana')
+          .attr('fill', 'red');
+      }
+
+      draw_data().catch(e => {
+        console.log('There was a problem reading the data: ' + e.message);
+      })
+      /*d3.csv('../data/time_scale_data.csv',row_converter).then((data, error) => {
+        if (error) {
+          console.log(error);
+        } else {
+          dataset = data;
+          console.log(`Data array length: ${data.length}`);
+          console.log(`Column names: ${data.columns}`);
+
+          const svg = d3.select('#chart-area')
+            .append('svg')
+            .attr('width', svg_width)
+            .attr('height', svg_height);
+
+          const x_scale = d3.scaleTime()
+            .domain([
+              d3.min(dataset, (d) => {
+                return d.Date;
+              }),
+              d3.max(dataset, d => d.Date)]).nice()
+            .range([padding, svg_width - padding * 3]);
+
+          const y_scale = d3.scaleLinear()
+            .domain([
+              d3.min(dataset, d => d.Amount),
+              d3.max(dataset, d => d.Amount)]).nice()
+            .range([svg_height - padding, padding]);
+
+          svg.selectAll('circle').data(dataset).enter()
+            .append('circle')
+            .attr('cx', d => x_scale(d.Date))
+            .attr('cy', d => y_scale(d.Amount))
+            .attr('r', 2);
+
+          svg.selectAll('text').data(dataset).enter()
+            .append('text')
+            .text(d => `${format_time(d.Date)}`)
+            .attr('x', d => x_scale(d.Date) + 5)
+            .attr('y', d => y_scale(d.Amount) + 4)
+            .attr('font-size', '10px')
+            .attr('font-family', 'Verdana')
+            .attr('fill', 'red');
+        }
+      })*/
+    </script>
+  </body>
+</html>

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>D3 Map Panning</title>
+  </head>
+  <style>
+    .pan rect {
+      fill: black;
+      opacity: 0.2;
+    }
+    .pan text {
+      fill: black;
+      font-size: 18px;
+      font-weight: bold;
+      text-anchor: middle;
+      cursor: pointer;
+    }
+    .pan:hover rect,
+    .pan:hover text {
+      fill: blue;
+    }
+  </style>
+  <body>
+    <div class="container">
+      <div id="svg-area"></div>
+    </div>
+
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      const svg_width = 1200;
+      const svg_height = 800;
+
+      //Define map projection
+      const projection = d3.geoAlbersUsa()
+        .translate([svg_width/2, svg_height/2])
+        .scale([2000]);
+
+      //Define path generator, using our custom projection
+      const path_function = d3.geoPath()
+        .projection(projection);
+
+      //create SVG element
+      const svg = d3.select('#svg-area')
+        .append('svg')
+        .attr('width',svg_width)
+        .attr('height',svg_height);
+
+      function create_pan_buttons() {
+        return new Promise((resolve,reject) => {
+          //Create the clickable groups
+          //North
+          const north_g = svg.append('g')
+            .attr('class', 'pan')	//All share the 'pan' class
+            .attr('id', 'north');	//The ID will tell us which direction to head
+          north_g.append('rect')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('width', svg_width)
+            .attr('height', 30);
+          north_g.append('text')
+            .attr('x', svg_width/2)
+            .attr('y', 20)
+            .html('&uarr;');
+
+          //South
+          const south_g = svg.append('g')
+            .attr('class', 'pan')
+            .attr('id', 'south');
+          south_g.append('rect')
+            .attr('x', 0)
+            .attr('y', svg_height - 30)
+            .attr('width', svg_width)
+            .attr('height', 30);
+          south_g.append('text')
+            .attr('x', svg_width/2)
+            .attr('y', svg_height - 10)
+            .html('&darr;');
+
+          //West
+          const west_g = svg.append('g')
+            .attr('class', 'pan')
+            .attr('id', 'west');
+          west_g.append('rect')
+            .attr('x', 0)
+            .attr('y', 30)
+            .attr('width', 30)
+            .attr('height', svg_height - 60);
+          west_g.append('text')
+            .attr('x', 15)
+            .attr('y', svg_height/2)
+            .html('&larr;');
+
+          //East
+          const east_g = svg.append('g')
+            .attr('class', 'pan')
+            .attr('id', 'east');
+          east_g.append('rect')
+            .attr('x', svg_width - 30)
+            .attr('y', 30)
+            .attr('width', 30)
+            .attr('height', svg_height - 60);
+          east_g.append('text')
+            .attr('x', svg_width - 15)
+            .attr('y', svg_height/2)
+            .html('&rarr;');
+
+          //Panning interaction
+          d3.selectAll('.pan')
+            .on('click', function() {
+              //Get current translation offset
+              const offset = projection.translate();
+              //Set how much to move on each click
+              const moveAmount = 25;
+              //Which way are we headed?
+              const direction = d3.select(this).attr('id');
+              //Modify the offset, depending on the direction
+              switch (direction) {
+                case 'north':
+                  offset[1] += moveAmount;  //Increase y offset
+                  break;
+                case 'south':
+                  offset[1] -= moveAmount;  //Decrease y offset
+                  break;
+                case 'west':
+                  offset[0] += moveAmount;  //Increase x offset
+                  break;
+                case 'east':
+                  offset[0] -= moveAmount;  //Decrease x offset
+                  break;
+                default:
+                  break;
+              }
+              //Update projection with new offset
+              projection.translate(offset);
+              //Update all paths and circles
+              svg.selectAll('path')
+                .transition()
+                .attr('d', path_function);
+              svg.selectAll('circle')
+                .transition()
+                .attr('cx', d => projection([d.lon, d.lat])[0])
+                .attr('cy', d => projection([d.lon, d.lat])[1]);
+            });
+          resolve(true);
+        });
+      }
+      async function show_map(map_file, cities_file){
+        //Load in GeoJSON data
+        const states_data = await d3.json(map_file);
+        //Load in cities data
+        const cities_data = await d3.csv(cities_file);
+
+        //Number formatting for population values
+        const formatAsThousands = d3.format(',');  //e.g. converts 123456 to "123,456"
+
+        //Bind map data and create one path per GeoJSON feature
+        svg.selectAll('path').data(states_data.features).enter()
+          .append('path')
+          .attr('stroke','blue')
+          .style('fill','green')
+          .attr('d', path_function);
+        //Bind cities data and create circles for cities
+        svg.selectAll('circle').data(cities_data).enter()
+          .append('circle')
+          .attr('cx', d => projection([d.lon,d.lat])[0])
+          .attr('cy', d => projection([d.lon,d.lat])[1])
+          .attr('r',d => Math.sqrt(parseInt(d.population)*0.00004))
+          .style('fill', 'yellow')
+          .style('stroke', 'gray')
+          .style('stroke-width', 0.25)
+          .style('opacity', 0.75)
+          .append('title')			//Simple tooltip
+          .text(d => `${d.place}: Pop. ${formatAsThousands(d.population)}`);
+
+        //Create pan buttons
+        const resolved = await create_pan_buttons();
+      }
+      const map_file = '../data/us-states.json';
+      const cities_file = '../data/us-cities.csv';
+      show_map(map_file, cities_file).catch(e => {
+        console.log(`There was a problem reading the map/csv data: ${map_file}, ${cities_file} ` + e.message);
+      })
+    </script>
+  </body>
+</html>

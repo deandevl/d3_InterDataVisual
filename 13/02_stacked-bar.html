@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>D3 Page Template</title>
+  </head>
+  <body>
+    <div class="container">
+      <div id="svg-area"></div>
+    </div>
+
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      const svg_width = 1000;
+      const svg_height = 600;
+      const colors = d3.scaleOrdinal(d3.schemeCategory10);
+
+      //Contributions in 2012 presidential election by profession
+      //In millions of dollars
+      const dataset = [
+        {Obama: 14, Romney: 5}, //Attorney
+        {Obama: 4, Romney: 8}, //CEO
+        {Obama: 3, Romney: 6}, //Consultant
+        {Obama: 1, Romney: 3}, //Executive
+        {Obama: 8, Romney: 3}, //Homemaker
+        {Obama: 5, Romney: 8}, //Not-Provided
+        {Obama: 4, Romney: 2}, //Physician
+        {Obama: 7, Romney: 10}, //President
+        {Obama: 10, Romney: 4}, //Professor
+        {Obama: 25, Romney: 11} //Retired
+      ];
+      console.log(dataset);
+
+      //set up scales
+      const x_scale = d3.scaleBand()
+        .domain(d3.range(dataset.length))
+        .range([0,svg_width])
+        .paddingInner(0.05);
+      const y_scale = d3.scaleLinear()
+        .domain([0,d3.max(dataset,(d) => {return d.Obama + d.Romney;})])
+        .range([svg_height,0]);
+
+      //set up stack method
+      const stack = d3.stack()
+        .keys(['Obama','Romney']);
+      //.order(d3.stackOrderDescending);
+
+      //data stacked
+      const series = stack(dataset);
+      console.log(series);
+
+      //create SVG element
+      const svg = d3.select('#svg-area')
+        .append('svg')
+        .attr('width',svg_width)
+        .attr('height',svg_height);
+
+      //add a group for each row
+      const groups = svg.selectAll('g')
+        .data(series)
+        .enter()
+        .append('g')
+        .style('fill',(d,i) => {
+          return colors(i);
+        });
+
+      //add a rect for each data value
+      const rects = groups.selectAll('rect')
+        .data(function(d) {return d;})
+        .enter()
+        .append('rect')
+        .attr('x',(d,i) => {return x_scale(i);})
+        .attr('y',(d) => {return y_scale(d[1]);})
+        .attr('height',(d) => {return y_scale(d[0]) - y_scale(d[1]);})
+        .attr('width',x_scale.bandwidth());
+    </script>
+  </body>
+</html>

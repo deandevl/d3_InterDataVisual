@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>D3 Page Template</title>
+  </head>
+  <style type="text/css">
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    p {
+      font-family: Verdana, sans-serif;
+      font-size: 12px;
+    }
+    input[type=radio] {
+      margin: 40px 0 60px 20px;
+    }
+    .axis path,
+    .axis line{
+      shape-rendering: crispEdges;
+    }
+    .axis text {
+      font-family: Verdana,sans-serif;
+      font-weight: bold;
+      font-size: 14px;
+    }
+  </style>
+  <body>
+    <div class="container">
+      <p>
+        <input type="radio" name="filterPreset" value="Iris-setosa"> Iris-setosa
+        <input type="radio" name="filterPreset" value="Iris-versicolor"> Iris-versicolor
+        <input type="radio" name="filterPreset" value="Iris-virginica"> Iris-virginica
+        <input type="radio" name="filterPreset" value="Reset"> Reset
+      </p>
+      <div id="svg-area"></div>
+    </div>
+    <!-- External JS libraries -->
+    <!--
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    -->
+    <script type="text/javascript" src="../../../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script src="main_12_iris_radio_filter.js"></script>
+  </body>
+</html>

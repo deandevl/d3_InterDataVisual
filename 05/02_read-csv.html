@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>Read csv via d3</title>
+    <script type="text/javascript" src = "../d3.min.js"></script>
+  </head>
+  <body>
+    <script>
+      const rowConverter = function(d){
+        return {
+          Food: d.Food,
+          Deliciousness: parseFloat(d.Deliciousness)
+        }
+      }
+      async function get_food(file_path){
+        const data = await d3.csv(file_path,rowConverter);
+        const food = data.slice(0,6);
+        const columns = data['columns'];
+        console.log({
+          food: food,
+          columns: columns
+        })
+      }
+      const file_path = '../data/food.csv';
+      get_food(file_path).catch(e => {
+        console.log(`There was a problem reading the food data: ${file_path} ` + e.message);
+      })
+    </script>
+  </body>
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>Chapter 11 Draw Path</title>
+  </head>
+  <style>
+    .axis path,
+    .axis line{
+      shape-rendering: crispEdges;
+    }
+    .axis text {
+      font-family: Verdana,sans-serif;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .line {
+      fill: none;
+      stroke: teal;
+      stroke-width: 0.5;
+    }
+    .safe_level {
+      stroke: red;
+      stroke-dasharray: 2, 3;
+    }
+    .danger {
+      fill: none;
+      stroke: red;
+    }
+    .danger_label {
+      font-family: Helvetica, sans-serif;
+      font-size: 12px;
+      fill: red;
+    }
+  </style>
+  <body>
+    <div class="container">
+      <div id="chart-area"></div>
+    </div>
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      let dataset = null;
+      const svg_width = 1200;
+      const svg_height = 700;
+      const padding = 60;
+      const format_time_tick = d3.timeFormat('%b%e');
+
+      const row_converter = (d) => {
+        return {
+          //make a new Date object for each year + month
+          //the '+' sign forces the string to be converted as numbers
+          date: new Date(+d.year,(+d.month - 1)),
+          //convert from string to float
+          average: parseFloat(d.average)
+        };
+      };
+
+      async function get_data(file_path) {
+        const dataset = await d3.csv(file_path,row_converter);
+
+        //set up scales
+        const x_scale = d3.scaleTime()
+          .domain([
+            d3.min(dataset,(d) => {return d.date;}),
+            d3.max(dataset,(d) => {return d.date;})
+          ])
+          .range([padding,svg_width-padding])
+          .nice();
+        const y_scale = d3.scaleLinear()
+          .domain([310,d3.max(dataset, (d) => {return d.average;})])
+          .range([svg_height-padding,padding]);
+
+        //create a svg element
+        const svg = d3.select('#chart-area')
+          .append('svg')
+          .attr('width',svg_width)
+          .attr('height',svg_height);
+
+        //define axis'
+        const x_axis = d3.axisBottom()
+          .scale(x_scale);
+        //.tickFormat(format_time_tick);
+        const y_axis = d3.axisLeft()
+          .scale(y_scale);
+
+        //create axis'
+        svg.append('g')
+          .attr('class','axis')
+          .attr('transform',`translate(0,${svg_height - padding})`)
+          .call(x_axis);
+        svg.append('g')
+          .attr('class','axis')
+          .attr('transform',`translate(${padding},0)`)
+          .call(y_axis);
+
+        //define/create lines
+        //define line generators
+        const data_line = d3.line()
+          .defined((d) => {return d.average >= 0 && d.average < 350;})
+          .x((d) => {return x_scale(d.date);})
+          .y((d) => {return y_scale(d.average);});
+        const danger_line = d3.line()
+          .defined((d) => {return d.average >= 350;})
+          .x((d) => {return x_scale(d.date);})
+          .y((d) => {return y_scale(d.average);});
+        //create lines
+        svg.append('path')
+          .datum(dataset)
+          .attr('class','line')
+          .attr('d',data_line);
+        svg.append('path')
+          .datum(dataset)
+          .attr('class', 'line danger')
+          .attr('d', danger_line);
+
+        //Draw 350 ppm line
+        svg.append('line')
+          .attr('class', 'line safe_level')
+          .attr('x1', padding)
+          .attr('x2', svg_width)
+          .attr('y1', y_scale(350))
+          .attr('y2', y_scale(350));
+
+        //label 350 ppm line
+        svg.append('text')
+          .attr('class', 'danger_label')
+          .attr('x', padding + 20)
+          .attr('y', y_scale(350) - 7)
+          .text('350 ppm “safe” level');
+      }
+      const file_path = '../data/mauna_loa_co2_monthly_averages.csv';
+      get_data(file_path).catch(e => {
+        console.log(`There was a problem reading the csv file: ${file_path} ` + e.message);
+      })
+    </script>
+  </body>
+</html>

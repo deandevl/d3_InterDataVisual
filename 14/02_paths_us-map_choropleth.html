@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>D3 Choropleth Map</title>
+  </head>
+  <style>
+    svg {
+      border: solid blueviolet 4px;
+      border-radius: 5px;
+    }
+  </style>
+
+  <body>
+    <div class="container">
+      <div id="svg-area"></div>
+    </div>
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      const svg_width = 1000;
+      const svg_height = 800;
+
+      //Define map projection
+      const projection = d3.geoAlbersUsa()
+        .translate([svg_width/2, svg_height/2])
+        //.scale([500]);
+        .scale([1000]);
+
+      //Define path generator, using our custom projection
+      const path_function = d3.geoPath()
+        .projection(projection);
+
+      //create SVG element
+      const svg = d3.select('#svg-area')
+        .append('svg')
+        .attr('width',svg_width)
+        .attr('height',svg_height);
+
+      async function show_map(map_file, ag_file, state_center_file) {
+        const ag_data = await d3.csv(ag_file);
+        const state_center_data = await d3.csv(state_center_file);
+        //Define quantize scale to sort ag data values into buckets of color
+        //Set input range/domain for color scale
+        const color = d3.scaleQuantize()
+          .range(['rgb(237,248,233)', 'rgb(186,228,179)',
+            'rgb(116,196,118)', 'rgb(49,163,84)', 'rgb(0,109,44)']);
+        color.domain([
+          d3.min(ag_data, d => d.value),
+          d3.max(ag_data, d => d.value)
+        ]);
+
+        //Load in GeoJSON data
+        const map_data = await d3.json(map_file);
+
+        //Merge the ag. data and GeoJSON
+        //Loop through once for each ag data value
+        for (let i = 0; i < state_center_data.length; i++) {
+          //Grab state name
+          const state = state_center_data[i].state;
+          const state_found = ag_data.find(ag => ag.state === state);
+          let ag_value = 0;
+          if(state_found){
+            //Grab data value, and convert from string to float
+            ag_value = parseFloat(state_found.value);
+          }
+
+          //Find the corresponding state inside the GeoJSON
+          const found_feature = map_data.features.find(feature => feature.properties.name === state);
+          const found_state_center = state_center_data.find(center => center.state === state);
+          found_feature.properties.value = ag_value;
+          found_feature.properties.lat = +found_state_center.lat;
+          found_feature.properties.long = +found_state_center.long;
+        }
+
+        //Bind map_data and create one path per GeoJSON feature
+        svg.selectAll('path').data(map_data.features).enter()
+          .append('path')
+          .attr('d', path_function)
+          .style('fill', d => {
+            //Get ag_value
+            const value = d.properties.value;
+            if (value) {
+              //If value exists…
+              return color(value);
+            } else {
+              //If value is undefined…
+              return '#ccc';
+            }
+          });
+
+        //Label each state with its ag value
+        svg.selectAll('text').data(map_data.features).enter()
+          .append('text')
+            .text(d => d.properties.value)
+            .attr('x', d => projection([d.properties.long, d.properties.lat])[0])
+            .attr('y', d => projection([d.properties.long, d.properties.lat])[1])
+            .attr('text-anchor', 'middle')
+            .attr('font-size', '9px')
+            .attr('font-family', 'Verdana')
+            .attr('fill', 'blue');
+
+      }
+      const map_file = '../data/us-states.json';
+      const ag_file = '../data/us-ag-productivity.csv';
+      const state_center_file = '../data/state_centers.csv';
+      show_map(map_file, ag_file, state_center_file).catch(e => {
+        console.log(`There was a problem reading the map/csv data: ${map_file}, ${ag_file} ` + e.message);
+      })
+    </script>
+  </body>
+</html>

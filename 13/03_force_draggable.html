@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>D3 Page Template</title>
+  </head>
+  <body>
+    <div class="container">
+      <div id="svg-area"></div>
+    </div>
+
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      const svg_width = 1000;
+      const svg_height = 600;
+      const colors = d3.scaleOrdinal(d3.schemeCategory10);
+
+      //Original data
+      const dataset = {
+        nodes: [
+          { name: 'Adam' },
+          { name: 'Bob' },
+          { name: 'Carrie' },
+          { name: 'Donovan' },
+          { name: 'Edward' },
+          { name: 'Felicity' },
+          { name: 'George' },
+          { name: 'Hannah' },
+          { name: 'Iris' },
+          { name: 'Jerry' }
+        ],
+        edges: [
+          { source: 0, target: 1 },
+          { source: 0, target: 2 },
+          { source: 0, target: 3 },
+          { source: 0, target: 4 },
+          { source: 1, target: 5 },
+          { source: 2, target: 5 },
+          { source: 2, target: 5 },
+          { source: 3, target: 4 },
+          { source: 5, target: 8 },
+          { source: 5, target: 9 },
+          { source: 6, target: 7 },
+          { source: 7, target: 8 },
+          { source: 8, target: 9 }
+        ]
+      };
+
+      //Initialize a simple force layout, using the nodes and edges in dataset
+      const force = d3.forceSimulation(dataset.nodes)
+        .force('charge', d3.forceManyBody())
+        .force('link', d3.forceLink(dataset.edges))
+        .force('center', d3.forceCenter().x(svg_width/2).y(svg_height/2));
+
+      //create SVG element
+      const svg = d3.select('#svg-area')
+        .append('svg')
+        .attr('width',svg_width)
+        .attr('height',svg_height);
+
+      //create edges as lines
+      const edges = svg.selectAll('line').data(dataset.edges).enter()
+        .append('line')
+        .style('stroke', '#ccc')
+        .style('stroke-width', 1);
+
+      //create nodes as circles
+      const nodes = svg.selectAll('circle').data(dataset.nodes).enter()
+        .append('circle')
+        .attr('r', 10)
+        .style('fill', (d, i) => colors(i))
+        .call(d3.drag(force)  //Define what to do on drag events
+          .on('start', dragStarted)
+          .on('drag', dragging)
+          .on('end', dragEnded));
+      //add a simple tooltip
+      nodes.append('title')
+        .text(d => d.name);
+
+      //every time the simulation "ticks", this will be called
+      force.on('tick', function() {
+        edges
+          .attr('x1', d => d.source.x)
+          .attr('y1', d => d.source.y)
+          .attr('x2', d => d.target.x)
+          .attr('y2', d => d.target.y);
+        nodes
+          .attr('cx', d => d.x)
+          .attr('cy', d => d.y);
+      });
+
+      //Define drag event functions
+      function dragStarted(evt) {
+        if (!evt.active) force.alphaTarget(0.3).restart();
+        evt.subject.vx = evt.subject.x;
+        evt.subject.vy = evt.subject.y;
+        /*d.fx = this.__data__.x;
+        d.fy = this.__data__.y;*/
+      }
+
+      function dragging(evt) {
+        evt.subject.vx = evt.x;
+        evt.subject.vy = evt.y;
+        /*d.fx = d3.event.x;
+        d.fy = d3.event.y;*/
+      }
+
+      function dragEnded(evt) {
+        if (!evt.active) force.alphaTarget(0);
+        evt.subject.vx = null;
+        evt.subject.vy = null;
+        /*d.fx = null;
+        d.fy = null;*/
+      }
+    </script>
+  </body>
+</html>

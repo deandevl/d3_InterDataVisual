@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>Chapter 10_draw_bars_hover_sort_svg_tooltip</title>
+  </head>
+  <style>
+    #sort-button {
+      font-weight: bold;
+      font-size: 22px;
+      color: white;
+      background-color: blue;
+      cursor: pointer;
+      border: 2px solid black;
+      border-radius: 15px;
+      padding: 5px;
+      width: 100px;
+      margin: 40px;
+    }
+    rect {
+      transition: all 1.0s;
+    }
+  </style>
+  <body>
+    <div class="container">
+      <div id="sort-button">Sort Bars</div>
+      <div id="chart-area"></div>
+    </div>
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      const svg_width = 800;
+      const svg_height = 500;
+      const max_value = 100;
+      let sort_order = false;
+      const reverse_order = () => {
+        sort_order = !sort_order;
+      };
+
+      const dataset = [];                         //Initialize empty array
+      for(let i = 0; i < 25; i++){            //Loop 25 times
+        const newNumber = Math.floor(Math.random() * max_value);   //New random number (0-29)
+        dataset.push(newNumber);
+      }
+
+      //compute x,y scaling
+      const x_scale = d3.scaleBand()
+        .domain(d3.range(dataset.length))
+        .rangeRound([0, svg_width]) //also enables rounding for 'paddingInner'
+        .paddingInner(0.05);
+      const y_scale = d3.scaleLinear()
+        .domain([0, d3.max(dataset)])
+        .range([0, svg_height]);
+
+      const svg = d3.select('#chart-area')
+        .append('svg')
+        .attr('width',svg_width)
+        .attr('height',svg_height);
+
+      svg.selectAll('rect')
+        .data(dataset)
+        .enter()
+        .append('rect')
+        .on('mouseover',function(evt){  //d3 is data driven
+          //Get this bar's x/y values, then augment for the tooltip
+          const x_pos = parseFloat(d3.select(this).attr('x')) + x_scale.bandwidth()/2;
+          let y_pos = parseFloat(d3.select(this).attr('y'));
+          if(this.__data__< 4){
+            y_pos = y_pos - 14;
+          }else {
+            y_pos = y_pos + 14;
+          }
+
+          svg.append('text')
+            .attr('id','tooltip')
+            .attr('x',x_pos)
+            .attr('y',y_pos)
+            .attr('text-anchor','middle')
+            .attr('font-family','Verdana')
+            .attr('font-size','11px')
+            .attr('font-weight','bold')
+            .attr('fill','black')
+            .style('pointer-events','none') //to prevent the mouseout event for 'rect'
+            .text(this.__data__);// 'this' is the d3 element the mouse is over
+          //fill the selected rect with color 'orange'
+          d3.select(this) //'this' references the rect
+            .attr('fill', 'orange');
+        })
+        .on('mouseout',function(d){
+          //delete the tooltip
+          d3.select('#tooltip').remove();
+          //fill the selected rect with original color
+          d3.select(this) //'this' references the rect
+            .transition()
+            .duration(500)
+            .attr('fill', (d) => {
+              return `rgb(0,0,${Math.round(d*10)})`;
+            })
+        })
+        .attr('x',(d,i) => {
+          return x_scale(i);
+        })
+        .attr('y',(d) => {
+          return svg_height - y_scale(d);
+        })
+        .attr('width', x_scale.bandwidth())
+        .attr('height',(d) => {
+          return y_scale(d);
+        })
+        .attr('fill',(d) => {
+          return `rgb(0,0,${Math.round(d*10)})`;
+        });
+      d3.select('#sort-button')
+        .on('click',() => {
+          svg.selectAll('rect')
+            .sort((a,b) => {
+              if(sort_order) {
+                return d3.ascending(a,b);
+              }else {
+                return d3.descending(a,b);
+              }
+            })
+            .transition()
+            .delay((d,i) => {
+              return i*50;
+            })
+            .duration(1000)
+            .attr('x',(d,i) => {
+              return x_scale(i);
+            });
+          svg.selectAll('text')
+            .sort((a,b) => {
+              if(sort_order) {
+                return d3.ascending(a,b);
+              }else {
+                return d3.descending(a,b);
+              }
+            })
+            .transition()
+            .delay((d,i) => {
+              return i*50;
+            })
+            .duration(1000)
+            .text(function(d) {
+              return d;
+            })
+            .attr('x', (d, i) => {
+              return x_scale(i) + x_scale.bandwidth() / 2;
+            })
+            .attr('y', (d) => {
+              if(d < 3){
+                return svg_height - y_scale(d) - 8;
+              }else {
+                return svg_height - y_scale(d) + 14;
+              }
+            });
+          reverse_order();
+        });
+    </script>
+  </body>
+</html>

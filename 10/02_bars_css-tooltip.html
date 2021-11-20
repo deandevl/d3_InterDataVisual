@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta name="description" content="">
+    <meta charset="utf-8">
+    <title>Chapter 10 draw_bars_css_tooltip</title>
+  </head>
+  <style>
+    #tooltip {
+      position: absolute;
+      width: 90px;
+      height: auto;
+      padding: 5px;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 4px 4px 10px rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
+    #tooltip.hidden {
+      display: none;
+    }
+    #tooltip p {
+      margin: 0;
+      font-family: Verdana,sans-serif;
+      font-size: 14px;
+      line-height: 16px;
+    }
+  </style>
+  <body>
+    <div class="container">
+      <div id="tooltip" class="hidden">
+        <p><strong>Value: </strong><span id="value">100</span>%</p>
+      </div>
+      <div id="chart-area"></div>
+    </div>
+    <script type="text/javascript" src="../d3.min.js"></script>
+    <!-- Custom JS -->
+    <script>
+      const svg_width = 800;
+      const svg_height = 500;
+      const max_value = 100;
+
+      const dataset = [];                         //Initialize empty array
+      for(let i = 0; i < 25; i++){            //Loop 25 times
+        const newNumber = Math.floor(Math.random() * max_value);   //New random number (0-29)
+        dataset.push(newNumber);
+      }
+
+      //compute x,y scaling
+      const x_scale = d3.scaleBand()
+        .domain(d3.range(dataset.length))
+        .rangeRound([0, svg_width]) //also enables rounding for 'paddingInner'
+        .paddingInner(0.05);
+      const y_scale = d3.scaleLinear()
+        .domain([0, d3.max(dataset)])
+        .range([0, svg_height]);
+
+      const svg = d3.select('#chart-area')
+        .append('svg')
+        .attr('width',svg_width)
+        .attr('height',svg_height);
+
+      svg.selectAll('rect')
+        .data(dataset)
+        .enter()
+        .append('rect')
+        .on('mouseover',function(evt){
+          //Get this bar's x/y values, then augment for the tooltip
+          const x_pos = parseFloat(d3.select(this).attr('x')) + x_scale.bandwidth()/2;
+          const y_pos = parseFloat(d3.select(this).attr('y'))/2 + svg_height/2;
+
+          //Update the tooltip position and value
+          d3.select('#tooltip')
+            .style('left',`${x_pos}px`)
+            .style('top',`${y_pos}px`)
+            .select('#value')
+            .text(this.__data__); // 'this' is the d3 element the mouse is over
+
+          d3.select('#tooltip').classed('hidden',false);
+        })
+        .on('mouseout',function(){
+          //hide tooltip
+          d3.select('#tooltip').classed('hidden',true);
+        })
+        .attr('x',(d,i) => {
+          return x_scale(i);
+        })
+        .attr('y',(d) => {
+          return svg_height - y_scale(d);
+        })
+        .attr('width', x_scale.bandwidth())
+        .attr('height',(d) => {
+          return y_scale(d);
+        })
+        .attr('fill',(d) => {
+          return `rgb(0,0,${Math.round(d*10)})`;
+        });
+    </script>
+  </body>
+</html>
